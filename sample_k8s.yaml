@@ -1,0 +1,84 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: access-verifier
+  labels:
+    app: access-verifier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: access-verifier
+  template:
+    metadata:
+      labels:
+        app: access-verifier
+    spec:
+      volumes:
+        - name: shared-vol
+          emptyDir:
+            sizeLimit: 50Mi
+      containers:
+        - name: verifier
+          image: verifier:1.0.0
+          ports:
+            - containerPort: 8080
+          # env:
+          #   - name: IP_WHITELIST
+          #     value: "/other/mountpoint/volume/dependent/ip-ranges.txt"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 50Mi
+            limits:
+              cpu: 400m
+              memory: 150Mi
+          volumeMounts:
+            - name: shared-vol
+              mountPath: /var/ranges
+              readOnly: true
+      initContainers:
+        - name: range-getter
+          image: range-getter:1.0.0
+          restartPolicy: Always
+          command:
+            - sh
+          args:
+            - -c
+            - while true; do python3 /range-getter/get_ranges.py && sleep 86400; done
+          resources:
+            requests:
+              cpu: 100m
+              memory: 20Mi
+            limits:
+              cpu: 200m
+              memory: 50Mi
+          # env:
+          #   - name: RANGES_URL
+          #     value: "https://new-address-provided-by-aws.com/ip-ranges.json"
+          #   - name: REGION_PREFIX
+          #     value: "us-east"
+          #   - name: IP_WHITELIST
+          #     value: "/other/mountpoint/volume/dependent/ip-ranges.txt"
+          volumeMounts:
+            - name: shared-vol
+              mountPath: /var/ranges
+              readOnly: false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: access-verifier
+  name: access-verifier-service
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: access-verifier
+  type: ClusterIP
