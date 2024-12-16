@@ -1,0 +1,10 @@
+FROM python:3.12-alpine3.21
+
+COPY src/ /range-getter
+RUN addgroup -g 1001 verifier && adduser -D -u 1001 -G verifier verifier
+USER verifier
+WORKDIR /range-getter
+
+RUN pip3 install -r /range-getter/requirements.txt
+
+CMD ["tail", "-f", "/dev/null"]

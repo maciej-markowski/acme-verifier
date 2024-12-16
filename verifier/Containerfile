@@ -1,0 +1,12 @@
+FROM python:3.12-alpine3.21
+
+COPY src/ /verifier
+RUN addgroup -g 1001 verifier && adduser -D -u 1001 -G verifier verifier
+USER verifier
+WORKDIR /verifier
+
+RUN pip3 install -r /verifier/requirements.txt
+
+EXPOSE 8080
+
+CMD ["python3", "/verifier/verifier.py"]
